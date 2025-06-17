@@ -1,0 +1,10 @@
+#!/bin/bash
+
+http_code=$(curl -s -w "%{http_code}" -o data.json "https://pokeapi.co/api/v2/pokemon/pikachu")
+
+if [ "$http_code" -eq 200 ]; then
+    echo "Pokemon data was fetched successfully and saved to data.json"
+else
+    echo "Error: $http_code - Failed to fetch Pokemon data" >> errors.txt
+    echo "Failed to fetch data with error code $http_code"
+fi
