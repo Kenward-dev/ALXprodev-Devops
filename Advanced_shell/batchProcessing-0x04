@@ -33,8 +33,12 @@ done
 echo "All fetch processes started. Waiting for completion..."
 echo
 
+jobs
+
 for pid in "${pids[@]}"; do
-    wait $pid
+    if kill -0 $pid 2>/dev/null; then
+        wait $pid
+    fi
 done
 
 echo "All Pokemon data fetching completed!"
