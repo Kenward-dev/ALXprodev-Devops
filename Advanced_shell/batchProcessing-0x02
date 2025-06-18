@@ -3,6 +3,7 @@
 pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
 delay=3
+max_retries=3
 
 echo "Fetching data for ${#pokemon_list[@]} Pokemon..."
 
@@ -16,14 +17,35 @@ for pokemon in "${pokemon_list[@]}"; do
 
     echo "Saving data to $filename"
 
-    http_code=$(curl -s -w "%{http_code}" -o "$filename" "https://pokeapi.co/api/v2/pokemon/${pokemon_lower}")
+    attempt=1
+    success=false
     
-    if [ "$http_code" -eq 200 ]; then
-        echo "Success: Data saved to $filename"
-    else
-        echo "Failed: HTTP $http_code for $pokemon"
-        echo "Error: HTTP $http_code - Failed to fetch $pokemon data" >> errors.txt
-        rm -f "$filename"
+    while [ $attempt -le $max_retries ] && [ "$success" = false ]; do
+        if [ $attempt -gt 1 ]; then
+            echo "Retry attempt $attempt for $pokemon..."
+        fi
+        
+        http_code=$(curl -s -w "%{http_code}" -o "$filename" "https://pokeapi.co/api/v2/pokemon/${pokemon_lower}")
+        
+        if [ "$http_code" -eq 200 ]; then
+            echo "Success: Data saved to $filename"
+            success=true
+        else
+            echo "Failed: HTTP $http_code for $pokemon (attempt $attempt/$max_retries)"
+            rm -f "$filename"
+            
+            if [ $attempt -lt $max_retries ]; then
+                echo "Retrying in ${delay}s..."
+                sleep $delay
+            fi
+        fi
+        
+        ((attempt++))
+    done
+    
+    if [ "$success" = false ]; then
+        echo "Error: HTTP $http_code - Failed to fetch $pokemon data after $max_retries attempts" >> errors.txt
+        echo "Giving up on $pokemon after $max_retries attempts"
     fi
     
     if [ "$pokemon" != "${pokemon_list[-1]}" ]; then
