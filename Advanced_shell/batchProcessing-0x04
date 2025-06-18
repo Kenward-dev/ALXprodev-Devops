@@ -1,0 +1,40 @@
+#!/bin/bash
+
+pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+fetch_pokemon() {
+    local pokemon=$1
+    local filename="${pokemon}.json"
+    
+    echo "Starting fetch for $pokemon..."
+    
+    http_code=$(curl -s -w "%{http_code}" -o "$filename" "https://pokeapi.co/api/v2/pokemon/${pokemon}")
+    
+    if [ "$http_code" -eq 200 ]; then
+        echo "Success: $pokemon data saved to $filename"
+    else
+        echo "Failed: HTTP $http_code for $pokemon"
+        echo "Error: HTTP $http_code - Failed to fetch $pokemon data" >> errors.txt
+        rm -f "$filename"
+    fi
+}
+
+echo "Fetching data for ${#pokemon_list[@]} Pokemon in parallel..."
+echo
+
+pids=()
+
+for pokemon in "${pokemon_list[@]}"; do
+    pokemon_lower=$(echo "$pokemon" | tr '[:upper:]' '[:lower:]')
+    fetch_pokemon "$pokemon_lower" &
+    pids+=($!)
+done
+
+echo "All fetch processes started. Waiting for completion..."
+echo
+
+for pid in "${pids[@]}"; do
+    wait $pid
+done
+
+echo "All Pokemon data fetching completed!"
